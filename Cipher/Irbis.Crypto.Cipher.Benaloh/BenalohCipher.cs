@@ -41,11 +41,27 @@ public sealed class Benaloh
     private sealed class KeysGenerator
     {
         
+        #region Fields
+        
         private readonly IPrimalityTest _primalityTest;
         private readonly double _probability;
         private readonly ulong _numSize;
-
-        public KeysGenerator(PrimalityTest mode, double minProbability, ulong size)
+        
+        #endregion
+        
+        #region Constructors
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mode"></param>
+        /// <param name="minProbability"></param>
+        /// <param name="size"></param>
+        /// <exception cref="ArgumentException"></exception>
+        public KeysGenerator(
+            PrimalityTest mode,
+            double minProbability,
+            ulong size)
         {
             _primalityTest = mode switch
             {
@@ -58,6 +74,10 @@ public sealed class Benaloh
             _probability = minProbability;
             _numSize = size;
         }
+        
+        #endregion
+        
+        #region Methods
 
         public Keys Generate(BigInteger r)
         {
@@ -90,7 +110,7 @@ public sealed class Benaloh
             };
         }
 
-        public BigInteger GetPrimeNumberP(BigInteger r)
+        private BigInteger GetPrimeNumberP(BigInteger r)
         {
             var random = new Random();
             var buffer =
@@ -209,6 +229,8 @@ public sealed class Benaloh
             // ура
             return qCandidate;
         }
+        
+        #endregion
         
     }
     

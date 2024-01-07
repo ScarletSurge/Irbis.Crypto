@@ -11,10 +11,14 @@ namespace Irbis.Crypto.Cipher.SHACAL1;
 public sealed class SHACAL1Cipher /* : <contracts list> */
 {
     
+    #region Constants
+    
     /// <summary>
     /// 
     /// </summary>
     private const int RoundsCount = 80;
+    
+    #endregion
     
     #region Fields
     
@@ -56,7 +60,7 @@ public sealed class SHACAL1Cipher /* : <contracts list> */
     /// </summary>
     static SHACAL1Cipher()
     {
-        EncryptionRoundFunctions = Array.AsReadOnly(new Func<uint, uint, uint, uint>[]
+        EncryptionRoundFunctions = Array.AsReadOnly(new Func<uint, uint, uint, uint> []
         {
             (x, y, z) => (x & y) | (~x & z),
             (x, y, z) => x ^ y ^ z,
@@ -64,7 +68,7 @@ public sealed class SHACAL1Cipher /* : <contracts list> */
             (x, y, z) => x ^ y ^ z
         });
         
-        DecryptionRoundFunctions = Array.AsReadOnly(new Func<uint, uint, uint, uint>[]
+        DecryptionRoundFunctions = Array.AsReadOnly(new Func<uint, uint, uint, uint> []
         {
             (x, y, z) => x ^ y ^ z,
             (x, y, z) => (x & y) | (x & z) | (y & z),

@@ -11,10 +11,14 @@ namespace Irbis.Crypto.Cipher.SHACAL2;
 public sealed class SHACAL2Cipher /* : <contracts list> */
 {
     
+    #region Constants
+    
     /// <summary>
     /// 
     /// </summary>
     private const int RoundsCount = 64;
+    
+    #endregion
     
     #region Fields
     

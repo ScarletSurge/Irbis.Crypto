@@ -82,7 +82,9 @@ public static class BigIntegerExtensions
     /// <param name="leftBound">Range's left bound, inclusive.</param>
     /// <param name="rightBound">Range's right bound, exclusive.</param>
     /// <returns></returns>
-    public static BigInteger RandomInRange(BigInteger leftBound, BigInteger rightBound)
+    public static BigInteger RandomInRange(
+        BigInteger leftBound,
+        BigInteger rightBound)
     {
         return RandomInRange1(leftBound, rightBound);
     }
@@ -93,7 +95,9 @@ public static class BigIntegerExtensions
     /// <param name="a"></param>
     /// <param name="p"></param>
     /// <returns></returns>
-    public static int LegendreSymbol(BigInteger a, BigInteger p)
+    public static int LegendreSymbol(
+        BigInteger a,
+        BigInteger p)
     {
         if (p < 2)
         {
@@ -133,7 +137,9 @@ public static class BigIntegerExtensions
     /// </summary>
     /// <param name="a"></param>
     /// <param name="n"></param>
-    public static int JacobiSymbol(BigInteger a, BigInteger n)
+    public static int JacobiSymbol(
+        BigInteger a,
+        BigInteger n)
     {
         if (BigInteger.GreatestCommonDivisor(a, n) != 1)
         {
