@@ -5,7 +5,7 @@ namespace Irbis.Crypto.Domain;
 /// <summary>
 /// 
 /// </summary>
-public sealed class CryptoTransformationContext
+public static class CryptoTransformationContext
 {
     
     #region Nested
@@ -875,15 +875,19 @@ public sealed class CryptoTransformationContext
         /// 
         /// </summary>
         /// <param name="block"></param>
+        /// <param name="blockInitialSize"></param>
         void Transform(
-            ref byte[] block);
+            ref byte[] block,
+            int? blockInitialSize = null);
         
         /// <summary>
         /// 
         /// </summary>
         /// <param name="block"></param>
+        /// <param name="forceResize"></param>
         void TransformBack(
-            ref byte[] block);
+            ref byte[] block,
+            bool forceResize = false);
 
     }
     
@@ -955,15 +959,19 @@ public sealed class CryptoTransformationContext
         /// 
         /// </summary>
         /// <param name="block"></param>
+        /// <param name="blockInitialSize"></param>
         protected abstract void TransformInner(
-            ref byte[] block);
+            ref byte[] block,
+            int? blockInitialSize = null);
         
         /// <summary>
         /// 
         /// </summary>
         /// <param name="block"></param>
+        /// <param name="forceResize"></param>
         protected abstract void TransformBackInner(
-            ref byte[] block);
+            ref byte[] block,
+            bool forceResize = false);
 
         #endregion
 
@@ -971,16 +979,18 @@ public sealed class CryptoTransformationContext
         
         /// <inheritdoc cref="IPaddingModeBlockTransformation.Transform" />
         public void Transform(
-            ref byte[] block)
+            ref byte[] block,
+            int? blockInitialSize = null)
         {
-            ThrowIfInvalidBlock(block, false).TransformInner(ref block);
+            ThrowIfInvalidBlock(block, false).TransformInner(ref block, blockInitialSize);
         }
         
         /// <inheritdoc cref="IPaddingModeBlockTransformation.TransformBack" />
         public void TransformBack(
-            ref byte[] block)
+            ref byte[] block,
+            bool forceResize = false)
         {
-            ThrowIfInvalidBlock(block).TransformBackInner(ref block);
+            ThrowIfInvalidBlock(block).TransformBackInner(ref block, forceResize);
         }
 
         #endregion
@@ -1013,9 +1023,10 @@ public sealed class CryptoTransformationContext
 
         /// <inheritdoc cref="BasePaddingModeBlockTransformation.TransformInner" />
         protected override void TransformInner(
-            ref byte[] block)
+            ref byte[] block,
+            int? blockInitialSize = null)
         {
-            if (block.Length == SymmetricCipherAlgorithm.BlockSize)
+            if ((blockInitialSize ?? block.Length) == SymmetricCipherAlgorithm.BlockSize)
             {
                 return;
             }
@@ -1025,7 +1036,8 @@ public sealed class CryptoTransformationContext
 
         /// <inheritdoc cref="BasePaddingModeBlockTransformation.TransformBackInner" />
         protected override void TransformBackInner(
-            ref byte[] block)
+            ref byte[] block,
+            bool forceResize = false)
         {
             var bytesToRemoveCount = 0;
             for (; bytesToRemoveCount < SymmetricCipherAlgorithm.BlockSize; bytesToRemoveCount++)
@@ -1037,6 +1049,11 @@ public sealed class CryptoTransformationContext
             }
 
             if (bytesToRemoveCount == 0)
+            {
+                return;
+            }
+
+            if (!forceResize)
             {
                 return;
             }
@@ -1074,9 +1091,10 @@ public sealed class CryptoTransformationContext
 
         /// <inheritdoc cref="BasePaddingModeBlockTransformation.TransformInner" />
         protected override void TransformInner(
-            ref byte[] block)
+            ref byte[] block,
+            int? blockInitialSize = null)
         {
-            if (block.Length == SymmetricCipherAlgorithm.BlockSize)
+            if ((blockInitialSize ?? block.Length) == SymmetricCipherAlgorithm.BlockSize)
             {
                 return;
             }
@@ -1088,7 +1106,8 @@ public sealed class CryptoTransformationContext
 
         /// <inheritdoc cref="BasePaddingModeBlockTransformation.TransformBackInner" />
         protected override void TransformBackInner(
-            ref byte[] block)
+            ref byte[] block,
+            bool forceResize = false)
         {
             var lastByteValue = block[^1];
             
@@ -1103,6 +1122,11 @@ public sealed class CryptoTransformationContext
                 {
                     return;
                 }
+            }
+
+            if (!forceResize)
+            {
+                return;
             }
             
             Array.Resize(ref block, block.Length - lastByteValue);
@@ -1138,9 +1162,10 @@ public sealed class CryptoTransformationContext
 
         /// <inheritdoc cref="BasePaddingModeBlockTransformation.TransformInner" />
         protected override void TransformInner(
-            ref byte[] block)
+            ref byte[] block,
+            int? blockInitialSize = null)
         {
-            if (block.Length == SymmetricCipherAlgorithm.BlockSize)
+            if ((blockInitialSize ?? block.Length) == SymmetricCipherAlgorithm.BlockSize)
             {
                 return;
             }
@@ -1152,7 +1177,8 @@ public sealed class CryptoTransformationContext
 
         /// <inheritdoc cref="BasePaddingModeBlockTransformation.TransformBackInner" />
         protected override void TransformBackInner(
-            ref byte[] block)
+            ref byte[] block,
+            bool forceResize = false)
         {
             var lastByteValue = block[^1];
             
@@ -1167,6 +1193,11 @@ public sealed class CryptoTransformationContext
                 {
                     return;
                 }
+            }
+            
+            if (!forceResize)
+            {
+                return;
             }
             
             Array.Resize(ref block, block.Length - lastByteValue);
@@ -1211,9 +1242,10 @@ public sealed class CryptoTransformationContext
 
         /// <inheritdoc cref="BasePaddingModeBlockTransformation.TransformInner" />
         protected override void TransformInner(
-            ref byte[] block)
+            ref byte[] block,
+            int? blockInitialSize = null)
         {
-            if (block.Length == SymmetricCipherAlgorithm.BlockSize)
+            if ((blockInitialSize ?? block.Length) == SymmetricCipherAlgorithm.BlockSize)
             {
                 return;
             }
@@ -1226,11 +1258,17 @@ public sealed class CryptoTransformationContext
 
         /// <inheritdoc cref="BasePaddingModeBlockTransformation.TransformBackInner" />
         protected override void TransformBackInner(
-            ref byte[] block)
+            ref byte[] block,
+            bool forceResize = false)
         {
             var lastByteValue = block[^1];
             
             if (lastByteValue >= SymmetricCipherAlgorithm.BlockSize || lastByteValue == 0)
+            {
+                return;
+            }
+
+            if (!forceResize)
             {
                 return;
             }
@@ -1246,59 +1284,35 @@ public sealed class CryptoTransformationContext
     
     #endregion
     
-    #region Fields
+    #region Methods
     
-    /// <summary>
-    /// 
-    /// </summary>
-    private readonly int _coresToUseCount;
     
-    /// <summary>
-    /// 
-    /// </summary>
-    private readonly byte[]? _transformationAdditionalData;
-    
-    /// <summary>
-    /// 
-    /// </summary>
-    private readonly ICipherModeBlockTransformation _cipherModeBlockTransformation;
-    
-    /// <summary>
-    /// 
-    /// </summary>
-    private readonly IPaddingModeBlockTransformation _paddingModeBlockTransformation;
-
-    #endregion
-    
-    #region Constructors
-    
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="coresToUseCount"></param>
-    /// <param name="algorithm"></param>
-    /// <param name="cipherMode"></param>
-    /// <param name="initializationVector"></param>
-    /// <param name="paddingMode"></param>
-    /// <exception cref="ArgumentOutOfRangeException"></exception>
-    /// <exception cref="ArgumentNullException"></exception>
-    public CryptoTransformationContext(
-        int coresToUseCount,
+    public static byte[] PerformCipher(
         ISymmetricCipherAlgorithm algorithm,
-        CipherMode cipherMode = CipherMode.ElectronicCodebook,
-        byte[]? initializationVector = null,
-        PaddingMode paddingMode = PaddingMode.Zeros)
+        int coresToUseCount,
+        CipherMode cipherMode,
+        PaddingMode paddingMode,
+        byte[] inputStream,
+        CipherTransformationMode cipherTransformationMode,
+        byte[]? initializationVector)
     {
-        _coresToUseCount = coresToUseCount > 0
-            ? coresToUseCount
-            : throw new ArgumentOutOfRangeException(nameof(coresToUseCount), "Cores to use count can't be LT or EQ to 0.");
-
-        if (cipherMode != CipherMode.ElectronicCodebook)
+        _ = algorithm ?? throw new ArgumentNullException(nameof(algorithm));
+        
+        if (coresToUseCount <= 0)
         {
-            _transformationAdditionalData = initializationVector ?? throw new ArgumentNullException(nameof(initializationVector));
+            throw new ArgumentOutOfRangeException(nameof(coresToUseCount), "Cores to use count must be GT 0.");
         }
         
-        _cipherModeBlockTransformation = cipherMode switch
+        if (cipherMode != CipherMode.ElectronicCodebook && initializationVector == null)
+        {
+            throw new ArgumentNullException(nameof(initializationVector));
+        }
+        if (algorithm.BlockSize != (initializationVector?.Length ?? algorithm.BlockSize))
+        {
+            throw new ArgumentOutOfRangeException(nameof(initializationVector), "Initialization vector length must be EQ to algorithm's block size.");
+        }
+        
+        ICipherModeBlockTransformation cipherModeBlockTransformation = cipherMode switch
         {
             CipherMode.ElectronicCodebook => new ElectronicCodebookCipherModeBlockTransformation(algorithm),
             CipherMode.CipherBlockChaining => new CipherBlockChainingCipherModeBlockTransformation(algorithm, coresToUseCount),
@@ -1310,7 +1324,7 @@ public sealed class CryptoTransformationContext
             _ => throw new ArgumentOutOfRangeException(nameof(cipherMode))
         };
 
-        _paddingModeBlockTransformation = paddingMode switch
+        IPaddingModeBlockTransformation paddingModeBlockTransformation = paddingMode switch
         {
             PaddingMode.Zeros => new ZerosPaddingModeBlockTransformation(algorithm),
             PaddingMode.PKCS7 => new PKCS7PaddingModeBlockTransformation(algorithm),
@@ -1318,21 +1332,40 @@ public sealed class CryptoTransformationContext
             PaddingMode.ISO10126 => new ISO10126PaddingModeBlockTransformation(algorithm),
             _ => throw new ArgumentOutOfRangeException(nameof(paddingMode))
         };
-    }
+        
+        var blocks = new byte[coresToUseCount][];
+        for (var i = 0; i < coresToUseCount; i++)
+        {
+            blocks[i] = new byte[cipherModeBlockTransformation.BlockSize];
+        }
+        var byteIndex = 0;
 
-    #endregion
-    
-    #region Methods
-    
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="inputStream"></param>
-    /// <returns></returns>
-    public byte[] PerformCipher(
-        byte[] inputStream)
-    {
-        throw new NotImplementedException();
+        while (byteIndex < inputStream.Length)
+        {
+            var blocksToTransformCount = 0;
+            
+            for (; blocksToTransformCount < coresToUseCount; blocksToTransformCount++)
+            {
+                var sourceIndex = byteIndex + blocksToTransformCount * cipherModeBlockTransformation.BlockSize;
+                if (sourceIndex >= inputStream.Length)
+                {
+                    break;
+                }
+                
+                Array.Copy(inputStream, sourceIndex, blocks[blocksToTransformCount], 0, cipherModeBlockTransformation.BlockSize);
+            }
+            
+            cipherModeBlockTransformation.Transform(cipherTransformationMode, blocks, 0, blocksToTransformCount, initializationVector);
+
+            for (var i = 0; i < coresToUseCount; i++)
+            {
+                Array.Copy(blocks[i], 0, inputStream, byteIndex + i * cipherModeBlockTransformation.BlockSize, cipherModeBlockTransformation.BlockSize);
+            }
+            
+            byteIndex += coresToUseCount * cipherModeBlockTransformation.BlockSize;
+        }
+
+        return inputStream;
     }
     
     /// <summary>
@@ -1341,7 +1374,7 @@ public sealed class CryptoTransformationContext
     /// <param name="inputFilePath"></param>
     /// <param name="outputFilePath"></param>
     /// <param name="cancellationToken"></param>
-    public Task PerformCipherAsync(
+    public static Task PerformCipherAsync(
         string inputFilePath,
         string outputFilePath,
         CancellationToken cancellationToken = default)

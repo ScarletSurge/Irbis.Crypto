@@ -98,8 +98,11 @@ public sealed class SHACAL1Cipher /* : <contracts list> */
     /// </summary>
     /// <param name="key"></param>
     /// <exception cref="ArgumentException"></exception>
-    public SHACAL1Cipher(byte[] key)
+    public SHACAL1Cipher(
+        byte[] key)
     {
+        _ = key ?? throw new ArgumentNullException(nameof(key));
+        
         if (key.Length is < 128 or > 512)
         {
             throw new ArgumentException("Invalid key", nameof(key));
