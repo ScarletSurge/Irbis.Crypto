@@ -6,10 +6,10 @@ var keyBytes = new byte[16];
 randomSource.NextBytes(keyBytes);
 var ivBytes = new byte[16];
 randomSource.NextBytes(ivBytes);
+var ivBytesCopied = (byte[])ivBytes.Clone();
 var dataBytes = new byte[64];
 randomSource.NextBytes(dataBytes);
 
 var algorithm = new CipherSample(keyBytes);
-CryptoTransformationContext.PerformCipher(algorithm, 4, CipherMode.OutputFeedback, PaddingMode.ISO10126, dataBytes, CipherTransformationMode.Encryption, ivBytes);
-CryptoTransformationContext.PerformCipher(algorithm, 4, CipherMode.OutputFeedback, PaddingMode.ISO10126, dataBytes, CipherTransformationMode.Decryption, ivBytes);
-var x = 10;
+await CryptoTransformationContext.PerformCipherAsync(algorithm, 4, CipherMode.CounterMode, PaddingMode.ISO10126, CipherTransformationMode.Encryption, ivBytes, "in.jpg", "out.jpg").ConfigureAwait(false);
+await CryptoTransformationContext.PerformCipherAsync(algorithm, 4, CipherMode.CounterMode, PaddingMode.ISO10126, CipherTransformationMode.Decryption, ivBytesCopied, "out.jpg", "in1.jpg").ConfigureAwait(false);

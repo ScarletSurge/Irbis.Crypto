@@ -5,7 +5,10 @@ namespace Irbis.Crypto.Auxiliary.Fraction;
 /// <summary>
 /// 
 /// </summary>
-public readonly struct Fraction : IEquatable<Fraction>, IComparable, IComparable<Fraction>
+public readonly struct Fraction:
+    IEquatable<Fraction>,
+    IComparable,
+    IComparable<Fraction>
 {
 
     #region Constructors
@@ -26,7 +29,10 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable, IComparable
     /// <param name="full"></param>
     /// <param name="numerator"></param>
     /// <param name="denominator"></param>
-    private Fraction(BigInteger full, BigInteger numerator, BigInteger denominator)
+    private Fraction(
+        BigInteger full,
+        BigInteger numerator,
+        BigInteger denominator)
     {
         if ((Denominator = denominator) == BigInteger.Zero)
         {
