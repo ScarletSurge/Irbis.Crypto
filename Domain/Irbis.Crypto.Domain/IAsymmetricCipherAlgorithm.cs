@@ -3,10 +3,10 @@
 /// <summary>
 /// 
 /// </summary>
-/// <typeparam name="TInput"></typeparam>
-/// <typeparam name="TOutput"></typeparam>
-public interface IAsymmetricCipherAlgorithm<TInput, TOutput>:
-    ICipherAlgorithm<TInput, TOutput>
+/// <typeparam name="TData"></typeparam>
+/// <typeparam name="TCiphertext"></typeparam>
+public interface IAsymmetricCipherAlgorithm<TData, TCiphertext>:
+    ICipherAlgorithm<TData, TCiphertext>
 {
     
 }

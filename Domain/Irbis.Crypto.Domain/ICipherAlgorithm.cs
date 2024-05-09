@@ -3,23 +3,27 @@
 /// <summary>
 /// 
 /// </summary>
-/// <typeparam name="TInput"></typeparam>
-/// <typeparam name="TOutput"></typeparam>
-public interface ICipherAlgorithm<TInput, TOutput>
+/// <typeparam name="TData"></typeparam>
+/// <typeparam name="TCiphertext"></typeparam>
+public interface ICipherAlgorithm<TData, TCiphertext>
 {
     
     /// <summary>
     /// 
     /// </summary>
     /// <param name="input"></param>
-    /// <returns></returns>
-    TOutput Encrypt(TInput input);
+    /// <param name="output"></param>
+    void Encrypt(
+        TData input,
+        ref TCiphertext output);
     
     /// <summary>
     /// 
     /// </summary>
+    /// <param name="input"></param>
     /// <param name="output"></param>
-    /// <returns></returns>
-    TInput Decrypt(TOutput output);
+    void Decrypt(
+        TCiphertext input,
+        ref TData output);
 
 }
