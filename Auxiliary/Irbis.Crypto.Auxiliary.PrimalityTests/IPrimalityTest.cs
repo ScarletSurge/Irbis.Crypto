@@ -14,6 +14,8 @@ public interface IPrimalityTest
     /// <param name="value"></param>
     /// <param name="epsilon"></param>
     /// <returns></returns>
-    bool CheckPrimality(BigInteger value, double epsilon);
+    bool CheckPrimality(
+        BigInteger value,
+        double epsilon);
 
 }

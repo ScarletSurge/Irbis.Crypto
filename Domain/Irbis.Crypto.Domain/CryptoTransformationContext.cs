@@ -529,7 +529,7 @@ public static class CryptoTransformationContext
                 case CipherTransformationMode.Encryption:
                     for (var blockIndex = blocksStartIndex; blockIndex < blocksStartIndex + blocksToTransformCount; blockIndex++)
                     {
-                        SymmetricCipherAlgorithm.Encrypt(transformationAdditionalData, ref transformationAdditionalData);
+                        SymmetricCipherAlgorithm.Encrypt(transformationAdditionalData!, ref transformationAdditionalData!);
                         ExclusiveOr(blocks[blockIndex], transformationAdditionalData);
                         blocks[blockIndex].CopyTo(transformationAdditionalData, 0);
                     }
@@ -537,13 +537,18 @@ public static class CryptoTransformationContext
                 case CipherTransformationMode.Decryption:
                     Parallel.For(blocksStartIndex, blocksStartIndex + blocksToTransformCount, blockIndex =>
                     {
-                        var blockToEncrypt = blockIndex == blocksStartIndex
-                            ? transformationAdditionalData
-                            : blocks[blockIndex - 1];
-                        SymmetricCipherAlgorithm.Encrypt(blockToEncrypt, ref _temporaryBlocksForDecryptionOperation[blockIndex % _temporaryBlocksForDecryptionOperation.Length]);
-                        ExclusiveOr(blocks[blockIndex], _temporaryBlocksForDecryptionOperation[blockIndex % _temporaryBlocksForDecryptionOperation.Length]);
+                        SymmetricCipherAlgorithm.Encrypt(blockIndex == blocksStartIndex
+                            ? transformationAdditionalData!
+                            : blocks[blockIndex - 1], ref _temporaryBlocksForDecryptionOperation[blockIndex - blocksStartIndex]);
+                        ExclusiveOr(_temporaryBlocksForDecryptionOperation[blockIndex - blocksStartIndex], blocks[blockIndex]);
                     });
-                    blocks[blocksStartIndex + blocksToTransformCount].CopyTo(transformationAdditionalData, 0);
+                    
+                    for (var blockIndex = blocksStartIndex; blockIndex < blocksStartIndex + blocksToTransformCount; ++blockIndex)
+                    {
+                        _temporaryBlocksForDecryptionOperation[blockIndex % _temporaryBlocksForDecryptionOperation.Length].CopyTo(blocks[blockIndex], 0);
+                    }
+                    
+                    blocks[blocksStartIndex + blocksToTransformCount - 1].CopyTo(transformationAdditionalData, 0);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(cipherTransformationMode));
@@ -562,10 +567,10 @@ public static class CryptoTransformationContext
             switch (cipherTransformationMode)
             {
                 case CipherTransformationMode.Encryption:
-                    for (var blockIndex = blocksStartIndex; blockIndex < blocksStartIndex + blocksToTransformCount; blockIndex++)
+                    for (var blockIndex = blocksStartIndex; blockIndex < blocksStartIndex + blocksToTransformCount; ++blockIndex)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        SymmetricCipherAlgorithm.Encrypt(transformationAdditionalData, ref transformationAdditionalData);
+                        SymmetricCipherAlgorithm.Encrypt(transformationAdditionalData!, ref transformationAdditionalData!);
                         ExclusiveOr(blocks[blockIndex], transformationAdditionalData);
                         blocks[blockIndex].CopyTo(transformationAdditionalData, 0);
                     }
@@ -573,13 +578,20 @@ public static class CryptoTransformationContext
                 case CipherTransformationMode.Decryption:
                     await Task.WhenAll(blocks.Skip(blocksStartIndex).Take(blocksToTransformCount).Select((_, blockIndex) => Task.Run(() =>
                     {
-                        var blockToEncrypt = blockIndex == blocksStartIndex
-                            ? transformationAdditionalData
-                            : blocks[blockIndex - 1];
-                        SymmetricCipherAlgorithm.Encrypt(blockToEncrypt, ref _temporaryBlocksForDecryptionOperation[blockIndex % _temporaryBlocksForDecryptionOperation.Length]);
-                        ExclusiveOr(blockToEncrypt, _temporaryBlocksForDecryptionOperation[blockIndex % _temporaryBlocksForDecryptionOperation.Length]);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        SymmetricCipherAlgorithm.Encrypt(blockIndex == blocksStartIndex
+                            ? transformationAdditionalData!
+                            : blocks[blockIndex - 1], ref _temporaryBlocksForDecryptionOperation[blockIndex - blocksStartIndex]);
+                        ExclusiveOr(_temporaryBlocksForDecryptionOperation[blockIndex - blocksStartIndex], blocks[blockIndex]);
                     }, cancellationToken)));
-                    blocks[blocksStartIndex + blocksToTransformCount].CopyTo(transformationAdditionalData, 0);
+                    
+                    blocks[blocksStartIndex + blocksToTransformCount - 1].CopyTo(transformationAdditionalData, 0);
+                    
+                    for (var blockIndex = blocksStartIndex; blockIndex < blocksStartIndex + blocksToTransformCount; ++blockIndex)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        _temporaryBlocksForDecryptionOperation[blockIndex - blocksStartIndex].CopyTo(blocks[blockIndex], 0);
+                    }
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(cipherTransformationMode));
@@ -1031,12 +1043,15 @@ public static class CryptoTransformationContext
             ref byte[] block,
             int? blockInitialSize = null)
         {
-            if ((blockInitialSize ?? block.Length) == SymmetricCipherAlgorithm.BlockSize)
+            if ((blockInitialSize ?? block.Length) != SymmetricCipherAlgorithm.BlockSize)
             {
-                return;
+                Array.Resize(ref block, SymmetricCipherAlgorithm.BlockSize);
             }
-            
-            Array.Resize(ref block, SymmetricCipherAlgorithm.BlockSize);
+
+            for (var i = blockInitialSize ?? SymmetricCipherAlgorithm.BlockSize; i != SymmetricCipherAlgorithm.BlockSize; ++i)
+            {
+                block[i] = 0;
+            }
         }
 
         /// <inheritdoc cref="BasePaddingModeBlockTransformation.TransformBackInner" />
@@ -1170,13 +1185,24 @@ public static class CryptoTransformationContext
             ref byte[] block,
             int? blockInitialSize = null)
         {
-            if ((blockInitialSize ?? block.Length) == SymmetricCipherAlgorithm.BlockSize)
+            var blockSize = blockInitialSize ?? block.Length;
+            
+            if (blockSize == SymmetricCipherAlgorithm.BlockSize)
             {
                 return;
             }
 
-            var difference = (byte)(SymmetricCipherAlgorithm.BlockSize - block.Length);
-            Array.Resize(ref block, SymmetricCipherAlgorithm.BlockSize);
+            var difference = (byte)(SymmetricCipherAlgorithm.BlockSize - blockSize);
+            if (block.Length != SymmetricCipherAlgorithm.BlockSize)
+            {
+                Array.Resize(ref block, SymmetricCipherAlgorithm.BlockSize);
+            }
+
+            for (var i = blockSize; i < block.Length; ++i)
+            {
+                block[i] = 0;
+            }
+            
             block[^1] = difference;
         }
 
@@ -1294,21 +1320,66 @@ public static class CryptoTransformationContext
     /// <summary>
     /// 
     /// </summary>
+    /// <param name="cipherMode"></param>
+    /// <param name="algorithm"></param>
+    /// <param name="coresToUseCount"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    private static ICipherModeBlockTransformation CreateCipherModeBlockTransformation(
+        CipherMode cipherMode,
+        ISymmetricCipherAlgorithm algorithm,
+        int coresToUseCount)
+    {
+        return cipherMode switch
+        {
+            CipherMode.ElectronicCodebook => new ElectronicCodebookCipherModeBlockTransformation(algorithm),
+            CipherMode.CipherBlockChaining => new CipherBlockChainingCipherModeBlockTransformation(algorithm, coresToUseCount),
+            CipherMode.PropagatingCipherBlockChaining => new PropagatingCipherBlockChainingCipherModeBlockTransformation(algorithm, coresToUseCount),
+            CipherMode.CipherFeedback => new CipherFeedbackCipherModeBlockTransformation(algorithm, coresToUseCount),
+            CipherMode.OutputFeedback => new OutputFeedbackCipherModeBlockTransformation(algorithm),
+            CipherMode.CounterMode => new CounterCipherModeBlockTransformation(algorithm, coresToUseCount),
+            CipherMode.RandomDelta => new RandomDeltaCipherModeBlockTransformation(algorithm),
+            _ => throw new ArgumentOutOfRangeException(nameof(cipherMode))
+        };
+    }
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="paddingMode"></param>
+    /// <param name="algorithm"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    private static IPaddingModeBlockTransformation CreatePaddingModeBlockTransformation(
+        PaddingMode paddingMode,
+        ISymmetricCipherAlgorithm algorithm)
+    {
+        return paddingMode switch
+        {
+            PaddingMode.Zeros => new ZerosPaddingModeBlockTransformation(algorithm),
+            PaddingMode.PKCS7 => new PKCS7PaddingModeBlockTransformation(algorithm),
+            PaddingMode.ANSIX923 => new ANSIX923PaddingModeBlockTransformation(algorithm),
+            PaddingMode.ISO10126 => new ISO10126PaddingModeBlockTransformation(algorithm),
+            _ => throw new ArgumentOutOfRangeException(nameof(paddingMode))
+        };
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
     /// <param name="algorithm"></param>
     /// <param name="coresToUseCount"></param>
     /// <param name="cipherMode"></param>
-    /// <param name="paddingMode"></param>
     /// <param name="cipherTransformationMode"></param>
     /// <param name="initializationVector"></param>
     /// <param name="inputStream"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static byte[] PerformCipher(
+    public static void PerformCipher(
         ISymmetricCipherAlgorithm algorithm,
         int coresToUseCount,
         CipherMode cipherMode,
-        PaddingMode paddingMode,
         CipherTransformationMode cipherTransformationMode,
         byte[]? initializationVector,
         byte[] inputStream)
@@ -1329,28 +1400,16 @@ public static class CryptoTransformationContext
         {
             throw new ArgumentOutOfRangeException(nameof(initializationVector), "Initialization vector length must be EQ to algorithm's block size.");
         }
-        
-        ICipherModeBlockTransformation cipherModeBlockTransformation = cipherMode switch
-        {
-            CipherMode.ElectronicCodebook => new ElectronicCodebookCipherModeBlockTransformation(algorithm),
-            CipherMode.CipherBlockChaining => new CipherBlockChainingCipherModeBlockTransformation(algorithm, coresToUseCount),
-            CipherMode.PropagatingCipherBlockChaining => new PropagatingCipherBlockChainingCipherModeBlockTransformation(algorithm, coresToUseCount),
-            CipherMode.CipherFeedback => new CipherFeedbackCipherModeBlockTransformation(algorithm, coresToUseCount),
-            CipherMode.OutputFeedback => new OutputFeedbackCipherModeBlockTransformation(algorithm),
-            CipherMode.CounterMode => new CounterCipherModeBlockTransformation(algorithm, coresToUseCount),
-            CipherMode.RandomDelta => new RandomDeltaCipherModeBlockTransformation(algorithm),
-            _ => throw new ArgumentOutOfRangeException(nameof(cipherMode))
-        };
 
-        IPaddingModeBlockTransformation paddingModeBlockTransformation = paddingMode switch
+        if (inputStream.Length % algorithm.BlockSize != 0)
         {
-            PaddingMode.Zeros => new ZerosPaddingModeBlockTransformation(algorithm),
-            PaddingMode.PKCS7 => new PKCS7PaddingModeBlockTransformation(algorithm),
-            PaddingMode.ANSIX923 => new ANSIX923PaddingModeBlockTransformation(algorithm),
-            PaddingMode.ISO10126 => new ISO10126PaddingModeBlockTransformation(algorithm),
-            _ => throw new ArgumentOutOfRangeException(nameof(paddingMode))
-        };
+            throw new ArgumentException("Input stream length must be divisible by block size of algorithm", nameof(inputStream));
+        }
+
+        var cipherModeBlockTransformation = CreateCipherModeBlockTransformation(cipherMode, algorithm, coresToUseCount);
         
+        var initializationVectorCopied = (byte[]?)initializationVector?.Clone();
+
         var blocks = new byte[coresToUseCount][];
         for (var i = 0; i < coresToUseCount; i++)
         {
@@ -1370,10 +1429,10 @@ public static class CryptoTransformationContext
                     break;
                 }
                 
-                Array.Copy(inputStream, sourceIndex, blocks[blocksToTransformCount], 0, cipherModeBlockTransformation.BlockSize);
+                Array.Copy(inputStream, sourceIndex, blocks[blocksToTransformCount], 0, Math.Min(inputStream.Length - sourceIndex, cipherModeBlockTransformation.BlockSize));
             }
-            
-            cipherModeBlockTransformation.Transform(cipherTransformationMode, blocks, 0, blocksToTransformCount, initializationVector);
+
+            cipherModeBlockTransformation.Transform(cipherTransformationMode, blocks, 0, blocksToTransformCount, initializationVectorCopied);
 
             for (var i = 0; i < coresToUseCount; i++)
             {
@@ -1382,8 +1441,6 @@ public static class CryptoTransformationContext
             
             byteIndex += coresToUseCount * cipherModeBlockTransformation.BlockSize;
         }
-
-        return inputStream;
     }
     
     /// <summary>
@@ -1429,28 +1486,17 @@ public static class CryptoTransformationContext
         }
 
         await using var inputFileReader = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read);
+        if (cipherTransformationMode == CipherTransformationMode.Decryption && inputFileReader.Length % algorithm.BlockSize != 0)
+        {
+            throw new FormatException("File size and 0 should be congruent modulo algorithm block size.");
+        }
+        
         await using var outputFileWriter = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write);
         
-        ICipherModeBlockTransformation cipherModeBlockTransformation = cipherMode switch
-        {
-            CipherMode.ElectronicCodebook => new ElectronicCodebookCipherModeBlockTransformation(algorithm),
-            CipherMode.CipherBlockChaining => new CipherBlockChainingCipherModeBlockTransformation(algorithm, coresToUseCount),
-            CipherMode.PropagatingCipherBlockChaining => new PropagatingCipherBlockChainingCipherModeBlockTransformation(algorithm, coresToUseCount),
-            CipherMode.CipherFeedback => new CipherFeedbackCipherModeBlockTransformation(algorithm, coresToUseCount),
-            CipherMode.OutputFeedback => new OutputFeedbackCipherModeBlockTransformation(algorithm),
-            CipherMode.CounterMode => new CounterCipherModeBlockTransformation(algorithm, coresToUseCount),
-            CipherMode.RandomDelta => new RandomDeltaCipherModeBlockTransformation(algorithm),
-            _ => throw new ArgumentOutOfRangeException(nameof(cipherMode))
-        };
+        var cipherModeBlockTransformation = CreateCipherModeBlockTransformation(cipherMode, algorithm, coresToUseCount);
+        var paddingModeBlockTransformation = CreatePaddingModeBlockTransformation(paddingMode, algorithm);
 
-        IPaddingModeBlockTransformation paddingModeBlockTransformation = paddingMode switch
-        {
-            PaddingMode.Zeros => new ZerosPaddingModeBlockTransformation(algorithm),
-            PaddingMode.PKCS7 => new PKCS7PaddingModeBlockTransformation(algorithm),
-            PaddingMode.ANSIX923 => new ANSIX923PaddingModeBlockTransformation(algorithm),
-            PaddingMode.ISO10126 => new ISO10126PaddingModeBlockTransformation(algorithm),
-            _ => throw new ArgumentOutOfRangeException(nameof(paddingMode))
-        };
+        var initializationVectorCopied = (byte[]?)initializationVector?.Clone();
         
         var blocks = new byte[coresToUseCount][];
         for (var i = 0; i < coresToUseCount; i++)
@@ -1462,26 +1508,37 @@ public static class CryptoTransformationContext
         while (byteIndex < inputFileReader.Length)
         {
             var blocksToTransformCount = 0;
+            var bytesRead = 0;
+            var sourceIndex = byteIndex;
             
             for (; blocksToTransformCount < coresToUseCount; blocksToTransformCount++)
             {
-                var sourceIndex = byteIndex + blocksToTransformCount * cipherModeBlockTransformation.BlockSize;
-                if (sourceIndex >= inputFileReader.Length)
+                if (sourceIndex + blocksToTransformCount * cipherModeBlockTransformation.BlockSize > inputFileReader.Length)
                 {
                     break;
                 }
 
-                await inputFileReader.ReadAsync(blocks[blocksToTransformCount].AsMemory(0, cipherModeBlockTransformation.BlockSize), cancellationToken).ConfigureAwait(false);
+                sourceIndex += bytesRead = await inputFileReader.ReadAsync(blocks[blocksToTransformCount].AsMemory(0, cipherModeBlockTransformation.BlockSize), cancellationToken).ConfigureAwait(false);
             }
-            
-            await cipherModeBlockTransformation.TransformAsync(cipherTransformationMode, blocks, 0, blocksToTransformCount, initializationVector, cancellationToken);
 
-            for (var i = 0; i < coresToUseCount; i++)
+            if (cipherTransformationMode == CipherTransformationMode.Encryption && bytesRead != algorithm.BlockSize)
             {
-                await outputFileWriter.WriteAsync(blocks[i], 0, cipherModeBlockTransformation.BlockSize, cancellationToken).ConfigureAwait(false);
+                paddingModeBlockTransformation.Transform(ref blocks[blocksToTransformCount - 1], bytesRead);
             }
             
-            byteIndex += coresToUseCount * cipherModeBlockTransformation.BlockSize;
+            await cipherModeBlockTransformation.TransformAsync(cipherTransformationMode, blocks, 0, blocksToTransformCount, initializationVectorCopied, cancellationToken);
+
+            if (cipherTransformationMode == CipherTransformationMode.Decryption && sourceIndex == inputFileReader.Length)
+            {
+                paddingModeBlockTransformation.TransformBack(ref blocks[blocksToTransformCount - 1], true);
+            }
+
+            for (var i = 0; i < blocksToTransformCount; i++)
+            {
+                await outputFileWriter.WriteAsync(blocks[i].AsMemory(0, blocks[i].Length), cancellationToken).ConfigureAwait(false);
+            }
+            
+            byteIndex += blocksToTransformCount * cipherModeBlockTransformation.BlockSize;
         }
     }
     
